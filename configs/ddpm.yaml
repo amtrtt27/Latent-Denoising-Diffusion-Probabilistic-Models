@@ -1,0 +1,25 @@
+run_name: ddpm
+seed: 42
+data_dir: ./data
+image_size: 128
+batch_size: #BATCH_SIZE 
+num_workers: #NUM_WORKERS
+num_classes: #NUM_CLASSES
+num_epochs: #NUM_EPOCHS
+learning_rate: #LR
+weight_decay: #WD
+num_train_timesteps: #TRAINING_TIMESTEPS
+num_inference_steps: #INFERENCE_TIMESTEPS
+beta_start: #BETA START
+beta_end: #BETA END
+beta_schedule: #BETA SCHEDULE
+
+variance_type: fixed_small
+predictor_type: epsilon
+unet_in_size: 128
+unet_in_ch: 3
+unet_ch: 128
+unet_num_res_blocks: 2
+unet_ch_mult: [1, 2, 2, 4]
+unet_attn: [2, 3]
+unet_dropout: 0.0
