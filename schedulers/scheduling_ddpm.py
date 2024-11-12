@@ -85,7 +85,6 @@ class DDPMScheduler(nn.Module):
         # TODO: set timesteps
         step_size = self.num_train_timesteps // num_inference_steps
         timesteps = np.arange(0, self.num_train_timesteps, step_size)[:num_inference_steps]
-        
         self.timesteps = torch.from_numpy(timesteps).to(device)
 
 
@@ -106,8 +105,14 @@ class DDPMScheduler(nn.Module):
         num_inference_steps = (
             self.num_inference_steps if self.num_inference_steps else self.num_train_timesteps
         )
-        # TODO: caluclate previous timestep
-        prev_t = None
+        # TODO: calculate previous timestep
+        index = (self.timesteps == timestep).nonzero(as_tuple=True)[0].item()
+        if index == 0:
+            # If it's the first timestep, return it as "previous" since there's no prior step
+            prev_t = self.timesteps[index]
+        else:
+            # Otherwise, return the previous timestep in the sequence
+            prev_t = self.timesteps[index - 1]
         return prev_t
 
     
