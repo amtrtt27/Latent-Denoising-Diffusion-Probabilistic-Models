@@ -43,18 +43,20 @@ class DDPMScheduler(nn.Module):
         # TODO: calculate betas
         if self.beta_schedule == 'linear':
             # This is the DDPM implementation
-            betas = None
+            betas = torch.linspace(self.beta_start, self.beta_end, self.num_train_timesteps)
+        else:
+            raise NotImplementedError(f"Beta schedule {self.beta_schedule} not implemented.")
         self.register_buffer("betas", betas)
          
         # TODO: calculate alphas
-        alphas = None 
+        alphas = 1.0 - betas 
         self.register_buffer("alphas", alphas)
         # TODO: calculate alpha cumulative product
-        alphas_cumprod = None 
+        alphas_cumprod = torch.cumprod(alphas, dim=0) 
         self.register_buffer("alphas_cumprod", alphas_cumprod)
         
         # TODO: timesteps
-        timesteps = None
+        timesteps = torch.arange(self.num_train_timesteps)
         self.register_buffer("timesteps", timesteps)
         
 
@@ -81,7 +83,9 @@ class DDPMScheduler(nn.Module):
             )
             
         # TODO: set timesteps
-        timesteps = None 
+        step_size = self.num_train_timesteps // num_inference_steps
+        timesteps = np.arange(0, self.num_train_timesteps, step_size)[:num_inference_steps]
+        
         self.timesteps = torch.from_numpy(timesteps).to(device)
 
 
