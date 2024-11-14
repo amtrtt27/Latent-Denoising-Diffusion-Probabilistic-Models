@@ -87,7 +87,7 @@ class DDPMPipeline:
             uncond_embeds = None 
         
         # TODO: starts with random noise
-        image = None # randn_tensor(image_shape, generator=generator, device=device)
+        image = randn_tensor(image_shape, generator=generator, device=device)
 
         # TODO: set step values using set_timesteps of scheduler
         self.scheduler = None
