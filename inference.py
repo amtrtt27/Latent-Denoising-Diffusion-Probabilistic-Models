@@ -10,6 +10,8 @@ from logging import getLogger as get_logger
 from tqdm import tqdm 
 from PIL import Image
 import torch.nn.functional as F
+import torchvision
+from torchvision import transforms
 
 from torchvision.utils  import make_grid
 
@@ -50,8 +52,15 @@ def main():
     num_params = sum(p.numel() for p in unet.parameters() if p.requires_grad)
     logger.info(f"Number of parameters: {num_params / 10 ** 6:.2f}M")
     
-    # TODO: ddpm shceduler
-    scheduler = DDPMScheduler(None )
+    # # TODO: ddpm shceduler
+    # scheduler = DDPMScheduler(
+    #     num_train_timesteps=args.num_train_timesteps,
+    #     beta_start=args.beta_start,
+    #     beta_end=args.beta_end,
+    #     beta_schedule=args.beta_schedule,
+    #     clip_sample=args.clip_sample,
+    #     clip_sample_range=args.clip_sample_range
+    # )
     # vae 
     vae = None
     if args.latent_ddpm:        
@@ -78,13 +87,21 @@ def main():
     else:
         shceduler_class = DDPMScheduler
     # TOOD: scheduler
-    scheduler = shceduler_class(None)
+    scheduler = shceduler_class(
+        num_train_timesteps=args.num_train_timesteps,
+        num_inference_steps=args.num_inference_steps,
+        beta_start=args.beta_start,
+        beta_end=args.beta_end,
+        beta_schedule=args.beta_schedule,
+        clip_sample=args.clip_sample,
+        clip_sample_range=args.clip_sample_range
+    )
 
     # load checkpoint
     load_checkpoint(unet, scheduler, vae=vae, class_embedder=class_embedder, checkpoint_path=args.ckpt)
     
     # TODO: pipeline
-    pipeline = DDPMPipeline(None)
+    pipeline = DDPMPipeline(unet, scheduler, vae=vae, class_embedder=class_embedder)
 
     
     logger.info("***** Running Infrence *****")
@@ -103,22 +120,57 @@ def main():
     else:
         # generate 5000 images
         for _ in tqdm(range(0, 5000, batch_size)):
-            gen_images = None 
+            gen_images = pipeline.generate(num_inference_steps=args.num_inference_steps,
+                                           generator=generator,
+                                            classes=args.num_classes,
+                                             guidnace_scale=args.guidnace_scale,
+                                              device=device )
             all_images.append(gen_images)
     
     # TODO: load validation images as reference batch
+    logger.info("Loading validation images for FID/IS computation")
+    val_dir = os.path.join(args.data_dir, 'dev')
+
+    validation_dataset = torchvision.datasets.ImageFolder(val_dir,
+                                              transform=transforms.Compose([
+                                                  transforms.Resize((args.image_size, args.image_size)),
+                                                  transforms.ToTensor(),
+                                                  transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+                                              ]))
     
-    
+    validation_loader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+
+    reference_images = []
+    for images, _ in validation_loader:
+        reference_images.append(images)
+    reference_images = torch.cat(reference_images, dim=0).to(device)
+
     # TODO: using torchmetrics for evaluation, check the documents of torchmetrics
     import torchmetrics 
-    
     from torchmetrics.image.fid import FrechetInceptionDistance, InceptionScore
-    
-    # TODO: compute FID and IS
-    
+
+    # Compute metrics
+    logger.info("Computing FID and IS")
+    fid = FrechetInceptionDistance(feature=2048).to(device)
+    inception_score = InceptionScore().to(device)
+
+    # Add generated images to metrics
+    for img_batch in torch.utils.data.DataLoader(torch.stack(all_images), batch_size=batch_size):
+        fid.update(img_batch, real=False)
+        inception_score.update(img_batch)
+
+    # Add reference images to metrics
+    for img_batch in torch.utils.data.DataLoader(reference_images, batch_size=batch_size):
+        fid.update(img_batch, real=True)
+
+    # Compute and log metrics
+    fid_score = fid.compute()
+    is_score = inception_score.compute()
+    logger.info(f"FID Score: {fid_score}")
+    logger.info(f"Inception Score: {is_score}")
+    wandb.log({"FID Score": fid_score, "Inception Score": is_score})
         
     
-
 
 if __name__ == '__main__':
     main()

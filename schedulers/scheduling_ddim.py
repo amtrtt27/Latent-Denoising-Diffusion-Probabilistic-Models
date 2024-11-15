@@ -93,7 +93,7 @@ class DDIMScheduler(DDPMScheduler):
         # TODO: 2. compute predicted original sample from predicted noise also called
         # "predicted x_0" of formula (15) from https://arxiv.org/pdf/2006.11239.pdf
         if self.prediction_type == 'epsilon':
-            pred_original_sample = (sample - beta_prod_t ** (0.5) * model_output) / alpha_prod_t ** (0.5) 
+            pred_original_sample = (sample - (beta_prod_t ** 0.5) * model_output) / alpha_prod_t ** (0.5) 
             pred_epsilon = model_output 
         else:
             raise NotImplementedError(f"Prediction type {self.prediction_type} not implemented.")
