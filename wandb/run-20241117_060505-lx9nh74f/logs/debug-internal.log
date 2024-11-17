@@ -1,0 +1,11 @@
+{"time":"2024-11-17T06:05:05.798536433Z","level":"INFO","msg":"using version","core version":"0.18.7"}
+{"time":"2024-11-17T06:05:05.798553643Z","level":"INFO","msg":"created symlink","path":"/home/ubuntu/idl/Latent-Denoising-Diffusion-Probabilistic-Models/wandb/run-20241117_060505-lx9nh74f/logs/debug-core.log"}
+{"time":"2024-11-17T06:05:05.901345226Z","level":"INFO","msg":"created new stream","id":"lx9nh74f"}
+{"time":"2024-11-17T06:05:05.901376946Z","level":"INFO","msg":"stream: started","id":"lx9nh74f"}
+{"time":"2024-11-17T06:05:05.901406706Z","level":"INFO","msg":"writer: Do: started","stream_id":"lx9nh74f"}
+{"time":"2024-11-17T06:05:05.901430177Z","level":"INFO","msg":"sender: started","stream_id":"lx9nh74f"}
+{"time":"2024-11-17T06:05:05.901488607Z","level":"INFO","msg":"handler: started","stream_id":"lx9nh74f"}
+{"time":"2024-11-17T06:05:06.104425518Z","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-17T15:17:20.282528058Z","level":"INFO","msg":"stream: closing","id":"lx9nh74f"}
+{"time":"2024-11-17T15:17:20.282607729Z","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-17T15:17:20.283465457Z","level":"INFO","msg":"Stopped system monitor"}

@@ -1,9 +1,10 @@
 run_name: ddpm
+test_imple: False
 seed: 42
-data_dir: ./data
+data_dir: ./data/imagenet100_128x128
 image_size: 128
-batch_size: 64
-num_workers: 8
+batch_size: 30
+num_workers: 4
 num_classes: #NUM_CLASSES
 num_epochs: 10
 learning_rate: 0.001
@@ -27,3 +28,5 @@ unet_num_res_blocks: 2
 unet_ch_mult: [1, 2, 2, 4]
 unet_attn: [2, 3]
 unet_dropout: 0.0
+
+cfg_guidance_scale:

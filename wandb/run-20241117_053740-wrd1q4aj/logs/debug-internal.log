@@ -1,0 +1,8 @@
+{"time":"2024-11-17T05:37:40.150729831Z","level":"INFO","msg":"using version","core version":"0.18.7"}
+{"time":"2024-11-17T05:37:40.150744761Z","level":"INFO","msg":"created symlink","path":"/home/ubuntu/idl/Latent-Denoising-Diffusion-Probabilistic-Models/wandb/run-20241117_053740-wrd1q4aj/logs/debug-core.log"}
+{"time":"2024-11-17T05:37:40.253927196Z","level":"INFO","msg":"created new stream","id":"wrd1q4aj"}
+{"time":"2024-11-17T05:37:40.254000877Z","level":"INFO","msg":"stream: started","id":"wrd1q4aj"}
+{"time":"2024-11-17T05:37:40.254069468Z","level":"INFO","msg":"handler: started","stream_id":"wrd1q4aj"}
+{"time":"2024-11-17T05:37:40.254080748Z","level":"INFO","msg":"sender: started","stream_id":"wrd1q4aj"}
+{"time":"2024-11-17T05:37:40.254062368Z","level":"INFO","msg":"writer: Do: started","stream_id":"wrd1q4aj"}
+{"time":"2024-11-17T05:37:40.417748203Z","level":"INFO","msg":"Starting system monitor"}

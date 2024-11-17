@@ -1,0 +1,8 @@
+{"time":"2024-11-17T05:38:23.226257934Z","level":"INFO","msg":"using version","core version":"0.18.7"}
+{"time":"2024-11-17T05:38:23.226275834Z","level":"INFO","msg":"created symlink","path":"/home/ubuntu/idl/Latent-Denoising-Diffusion-Probabilistic-Models/wandb/run-20241117_053823-sin13tar/logs/debug-core.log"}
+{"time":"2024-11-17T05:38:23.329014233Z","level":"INFO","msg":"created new stream","id":"sin13tar"}
+{"time":"2024-11-17T05:38:23.329047583Z","level":"INFO","msg":"stream: started","id":"sin13tar"}
+{"time":"2024-11-17T05:38:23.329097454Z","level":"INFO","msg":"sender: started","stream_id":"sin13tar"}
+{"time":"2024-11-17T05:38:23.329098984Z","level":"INFO","msg":"writer: Do: started","stream_id":"sin13tar"}
+{"time":"2024-11-17T05:38:23.329117674Z","level":"INFO","msg":"handler: started","stream_id":"sin13tar"}
+{"time":"2024-11-17T05:38:23.50335512Z","level":"INFO","msg":"Starting system monitor"}

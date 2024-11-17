@@ -1,0 +1,16 @@
+{"time":"2024-11-17T03:14:23.033158772Z","level":"INFO","msg":"using version","core version":"0.18.7"}
+{"time":"2024-11-17T03:14:23.033176182Z","level":"INFO","msg":"created symlink","path":"/home/ubuntu/idl/Latent-Denoising-Diffusion-Probabilistic-Models/wandb/run-20241117_031423-csp8cdyb/logs/debug-core.log"}
+{"time":"2024-11-17T03:14:23.13571589Z","level":"INFO","msg":"created new stream","id":"csp8cdyb"}
+{"time":"2024-11-17T03:14:23.135754401Z","level":"INFO","msg":"stream: started","id":"csp8cdyb"}
+{"time":"2024-11-17T03:14:23.135801521Z","level":"INFO","msg":"writer: Do: started","stream_id":"csp8cdyb"}
+{"time":"2024-11-17T03:14:23.135816991Z","level":"INFO","msg":"handler: started","stream_id":"csp8cdyb"}
+{"time":"2024-11-17T03:14:23.135805011Z","level":"INFO","msg":"sender: started","stream_id":"csp8cdyb"}
+{"time":"2024-11-17T03:14:23.375773308Z","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-17T03:14:24.058159303Z","level":"INFO","msg":"stream: closing","id":"csp8cdyb"}
+{"time":"2024-11-17T03:14:24.058182213Z","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-17T03:14:24.05899679Z","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-17T03:14:25.031766485Z","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2024-11-17T03:14:25.163591597Z","level":"INFO","msg":"handler: closed","stream_id":"csp8cdyb"}
+{"time":"2024-11-17T03:14:25.163617817Z","level":"INFO","msg":"writer: Close: closed","stream_id":"csp8cdyb"}
+{"time":"2024-11-17T03:14:25.163620767Z","level":"INFO","msg":"sender: closed","stream_id":"csp8cdyb"}
+{"time":"2024-11-17T03:14:25.163661807Z","level":"INFO","msg":"stream: closed","id":"csp8cdyb"}

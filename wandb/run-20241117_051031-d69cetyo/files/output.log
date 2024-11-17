@@ -1,0 +1,30 @@
+11/17/2024 05:10:31 - INFO - __main__ - ***** Training arguments *****
+11/17/2024 05:10:31 - INFO - __main__ - Namespace(config='configs/ddpm.yaml', test_imple=True, data_dir='./data/imagenet100_128x128', image_size=128, batch_size=30, num_workers=4, num_classes=None, run_name='exp-14-ddpm', output_dir='experiments', num_epochs=10, learning_rate=0.001, weight_decay=0.0001, grad_clip=1.0, seed=42, mixed_precision='none', num_train_timesteps=1000, num_inference_steps=50, beta_start=0.0001, beta_end=0.02, beta_schedule='linear', variance_type='fixed_small', prediction_type='epsilon', clip_sample=True, clip_sample_range=1.0, unet_in_size=128, unet_in_ch=3, unet_ch=128, unet_ch_mult=[1, 2, 2, 4], unet_attn=[2, 3], unet_num_res_blocks=2, unet_dropout=0.0, latent_ddpm=False, use_cfg=False, cfg_guidance_scale=None, use_ddim=False, ckpt=None, predictor_type='epsilon', distributed=False, world_size=1, rank=0, local_rank=0, device='cuda', total_batch_size=30, max_train_steps=43340)
+11/17/2024 05:10:31 - INFO - __main__ - ***** Running training *****
+11/17/2024 05:10:31 - INFO - __main__ -   Num examples = 130000
+11/17/2024 05:10:31 - INFO - __main__ -   Num Epochs = 10
+11/17/2024 05:10:31 - INFO - __main__ -   Instantaneous batch size per device = 30
+11/17/2024 05:10:31 - INFO - __main__ -   Total train batch size (w. parallel, distributed & accumulation) = 30
+11/17/2024 05:10:31 - INFO - __main__ -   Total optimization steps per epoch 4334
+11/17/2024 05:10:31 - INFO - __main__ -   Total optimization steps = 43340
+/home/ubuntu/idl/Latent-Denoising-Diffusion-Probabilistic-Models/train.py:274: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  scaler = torch.cuda.amp.GradScaler()
+  0%|                                                                                                                                                                                 | 0/4334 [00:00<?, ?it/s]11/17/2024 05:10:31 - INFO - __main__ - Epoch 1/1
+/home/ubuntu/idl/Latent-Denoising-Diffusion-Probabilistic-Models/train.py:326: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with torch.cuda.amp.autocast():
+  0%|                                                                                                                                                                       | 1/4334 [00:01<2:05:57,  1.74s/it]
+Traceback (most recent call last):
+  File "/home/ubuntu/idl/Latent-Denoising-Diffusion-Probabilistic-Models/train.py", line 413, in <module>
+    main()
+  File "/home/ubuntu/idl/Latent-Denoising-Diffusion-Probabilistic-Models/train.py", line 384, in main
+    gen_images = pipeline(batch_size=batch_size,
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ubuntu/idl/Latent-Denoising-Diffusion-Probabilistic-Models/pipelines/ddpm.py", line 93, in __call__
+    self.scheduler.set_timesteps(num_inference_steps)
+  File "/home/ubuntu/idl/Latent-Denoising-Diffusion-Probabilistic-Models/schedulers/scheduling_ddpm.py", line 90, in set_timesteps
+    self.timesteps = torch.from_numpy(timesteps).to(device)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: At least one stride in the given numpy array is negative, and tensors with negative strides are not currently supported. (You can probably work around this by making a copy of your array  with array.copy().)

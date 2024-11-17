@@ -30,6 +30,7 @@ def parse_args():
     
     # config file
     parser.add_argument("--config", type=str, default='configs/ddpm.yaml', help="config file used to specify parameters")
+    parser.add_argument("--test_imple", type=bool, default='configs/ddpm.yaml', help="test implementation")
 
     # data 
     parser.add_argument("--data_dir", type=str, default='./data/imagenet100_128x128/train', help="data folder") 
@@ -164,9 +165,8 @@ def main():
         os.makedirs(output_dir, exist_ok=True)
         os.makedirs(save_dir, exist_ok=True)
     
-    # setup model
-    model_id = str(uuid.uuid4().hex[:6])
-    logger.info(f"Creating model with ID: {model_id}")
+
+    logger.info(f"Creating model")
     # unet
     unet = UNet(input_size=args.unet_in_size, input_ch=args.unet_in_ch, T=args.num_train_timesteps, ch=args.unet_ch, ch_mult=args.unet_ch_mult, attn=args.unet_attn, num_res_blocks=args.unet_num_res_blocks, dropout=args.unet_dropout, conditional=args.use_cfg, c_dim=args.unet_ch)
     # preint number of parameters
@@ -253,7 +253,7 @@ def main():
     if is_primary(args):
         wandb_logger = wandb.init(
             project='ddpm', 
-            name=f"{args.run_name}_{model_id}", 
+            name=f"{args.run_name}", 
             config=vars(args))
     
     # Start training    
@@ -267,11 +267,16 @@ def main():
         logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
         logger.info(f"  Total optimization steps per epoch {num_update_steps_per_epoch}")
         logger.info(f"  Total optimization steps = {args.max_train_steps}")
-    # Only show the progress bar once on each machine.
-    progress_bar = tqdm(range(args.max_train_steps), disable=not is_primary(args))
 
+    if args.test_imple:
+        args.num_epochs = 1
+
+    scaler = torch.amp.GradScaler()
+    # progress_bar = tqdm(range(args.max_train_steps), disable=not is_primary(args))
     # training
     for epoch in range(args.num_epochs):
+        
+        progress_bar = tqdm(range(len(train_loader)), dynamic_ncols=True, disable=not is_primary(args))
         
         # set epoch for distributed sampler, this is for distribution training
         if hasattr(train_loader.sampler, 'set_epoch'):
@@ -288,7 +293,8 @@ def main():
         unet.train()
         scheduler.train()
         
-        
+        generator = torch.Generator(device=device)
+        generator.manual_seed(epoch + args.seed)
         # TODO: finish this
         for step, (images, labels) in enumerate(train_loader):
             
@@ -317,50 +323,56 @@ def main():
                 # NOTE: if not cfg, set class_emb to None
                 class_emb = None
             
-            # TODO: sample noise 
-            noise = randn_tensor(
-                images.shape, generator=generator, device=device, dtype=images.dtype
-            ) 
-            
-            # TODO: sample timestep t
-            timesteps = torch.randint(0, args.num_train_timesteps, (batch_size,), device=device).long()
-            
-            # TODO: add noise to images using scheduler
-            noisy_images = scheduler.add_noise(images, noise, timesteps)
-            
-            # TODO: model prediction
-            model_pred = unet(noisy_images, timesteps, class_emb)
-            
-            if args.prediction_type == 'epsilon':
-                target = noise 
-            
-            # TODO: calculate loss
-            loss = F.mse_loss(model_pred, target)
+            with torch.amp.autocast(device_type='cuda', enabled=True):
+                # TODO: sample noise 
+                noise = randn_tensor(
+                    images.shape, generator=generator, device=device, dtype=images.dtype
+                ) 
+                
+                # TODO: sample timestep t
+                timesteps = torch.randint(0, args.num_train_timesteps, (batch_size,), device=device).long()
+                
+                # TODO: add noise to images using scheduler
+                noisy_images = scheduler.add_noise(images, noise, timesteps)
+                
+                # TODO: model prediction
+                model_pred = unet(noisy_images, timesteps, class_emb)
+                
+                if args.prediction_type == 'epsilon':
+                    target = noise 
+                
+                # TODO: calculate loss
+                loss = F.mse_loss(model_pred, target)
             
             # record loss
             loss_m.update(loss.item())
             
             # backward and step 
-            loss.backward()
+            scaler.scale(loss).backward() # This is a replacement for loss.backward()
             # TODO: grad clip
             if args.grad_clip:
                 torch.nn.utils.clip_grad_norm_(unet.parameters(), args.grad_clip)
             
             # TODO: step your optimizer
-            optimizer.step()
-            progress_bar.update(1)
+            # optimizer.step()
+            scaler.step(optimizer) # This is a replacement for optimizer.step()
+            scaler.update()
+            progress_bar.set_postfix(loss="{:.04f} ({:.04f})".format(loss.item(), loss_m.avg))
+            progress_bar.update()
+
+            if args.test_imple:
+                break
             
             # logger
-            if step % 100 == 0 and is_primary(args):
-                logger.info(f"Epoch {epoch+1}/{args.num_epochs}, Step {step}/{num_update_steps_per_epoch}, Loss {loss.item()} ({loss_m.avg})")
+            if step % 200 == 0 and is_primary(args):
+                # logger.info(f"Epoch {epoch+1}/{args.num_epochs}, Step {step}/{num_update_steps_per_epoch}, Loss {loss.item()} ({loss_m.avg})")
                 wandb_logger.log({'loss': loss_m.avg})
-
+        
+        progress_bar.close()
         # validation
         # send unet to evaluation mode
         lr_scheduler.step()
         unet.eval()        
-        generator = torch.Generator(device=device)
-        generator.manual_seed(epoch + args.seed)
         
         # NOTE: this is for CFG
         if args.use_cfg:
@@ -373,7 +385,7 @@ def main():
             gen_images = pipeline(batch_size=batch_size,
                             num_inference_steps=args.num_inference_steps,
                             classes=args.num_classes,
-                            guidance_scale=args.guidance_scale,
+                            guidance_scale=args.cfg_guidance_scale,
                             generator=generator,
                             device = device,
                         ) 
@@ -392,7 +404,9 @@ def main():
             
         # save checkpoint
         if is_primary(args):
-            save_checkpoint(unet_wo_ddp, scheduler_wo_ddp, vae_wo_ddp, class_embedder, optimizer, epoch, save_dir=save_dir, model_id=model_id)
+            save_checkpoint(unet_wo_ddp, scheduler_wo_ddp, vae_wo_ddp, class_embedder, optimizer, epoch, save_dir=save_dir)
+
+        torch.cuda.empty_cache()
 
 
 

@@ -1,0 +1,117 @@
+_wandb:
+    value:
+        cli_version: 0.18.7
+        m: []
+        python_version: 3.12.7
+        t:
+            "1":
+                - 1
+                - 41
+                - 55
+            "2":
+                - 1
+                - 41
+                - 55
+            "3":
+                - 13
+                - 16
+                - 23
+                - 55
+            "4": 3.12.7
+            "5": 0.18.7
+            "8":
+                - 5
+            "12": 0.18.7
+            "13": linux-x86_64
+batch_size:
+    value: 16
+beta_end:
+    value: "0.02"
+beta_schedule:
+    value: linear
+beta_start:
+    value: "0.0001"
+cfg_guidance_scale:
+    value: 2
+ckpt:
+    value: null
+clip_sample:
+    value: true
+clip_sample_range:
+    value: "1.0"
+config:
+    value: configs/ddpm.yaml
+data_dir:
+    value: ./data/imagenet100_128x128
+device:
+    value: cuda
+distributed:
+    value: false
+grad_clip:
+    value: 1
+image_size:
+    value: 128
+latent_ddpm:
+    value: false
+learning_rate:
+    value: "0.001"
+local_rank:
+    value: 0
+max_train_steps:
+    value: 81250
+mixed_precision:
+    value: none
+num_classes:
+    value: 100
+num_epochs:
+    value: 10
+num_inference_steps:
+    value: 50
+num_train_timesteps:
+    value: 1000
+num_workers:
+    value: 4
+output_dir:
+    value: experiments
+prediction_type:
+    value: epsilon
+predictor_type:
+    value: epsilon
+rank:
+    value: 0
+run_name:
+    value: exp-5-ddpm
+seed:
+    value: 42
+total_batch_size:
+    value: 16
+unet_attn:
+    value:
+        - 2
+        - 3
+unet_ch:
+    value: 128
+unet_ch_mult:
+    value:
+        - 1
+        - 2
+        - 2
+        - 4
+unet_dropout:
+    value: "0.0"
+unet_in_ch:
+    value: 3
+unet_in_size:
+    value: 128
+unet_num_res_blocks:
+    value: 2
+use_cfg:
+    value: false
+use_ddim:
+    value: false
+variance_type:
+    value: fixed_small
+weight_decay:
+    value: "0.0001"
+world_size:
+    value: 1

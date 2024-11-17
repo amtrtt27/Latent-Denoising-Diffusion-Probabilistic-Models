@@ -86,7 +86,7 @@ class DDPMScheduler(nn.Module):
             
         # TODO: set timesteps
         step_size = self.num_train_timesteps // num_inference_steps
-        timesteps = np.arange(0, self.num_train_timesteps, dtype=int)[::step_size][:num_inference_steps][::-1]
+        timesteps = np.arange(0, self.num_train_timesteps, dtype=int)[::step_size][:num_inference_steps][::-1].copy()
         self.timesteps = torch.from_numpy(timesteps).to(device)
 
 

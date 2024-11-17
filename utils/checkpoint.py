@@ -23,12 +23,12 @@ def load_checkpoint(unet, scheduler, vae=None, class_embedder=None, optimizer=No
     
         
 
-def save_checkpoint(unet, scheduler, vae=None, class_embedder=None, optimizer=None, epoch=None, save_dir='checkpoints', model_id=""):
+def save_checkpoint(unet, scheduler, vae=None, class_embedder=None, optimizer=None, epoch=None, save_dir='checkpoints'):
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
     # Define checkpoint file name
-    checkpoint_path = os.path.join(save_dir, f'{model_id}_checkpoint_epoch_{epoch}.pth')
+    checkpoint_path = os.path.join(save_dir, f'checkpoint_epoch_{epoch}.pth')
 
     checkpoint = {
         'unet_state_dict': unet.state_dict(),
@@ -56,7 +56,7 @@ def save_checkpoint(unet, scheduler, vae=None, class_embedder=None, optimizer=No
     manage_checkpoints(save_dir, keep_last_n=10)
 
 
-def manage_checkpoints(save_dir, keep_last_n=20):
+def manage_checkpoints(save_dir, keep_last_n=10):
     # List all checkpoint files in the save directory
     checkpoints = [f for f in os.listdir(save_dir) if f.startswith('checkpoint_epoch_')]
     checkpoints.sort(key=lambda f: int(f.split('_')[-1].split('.')[0]))  # Sort by epoch number
