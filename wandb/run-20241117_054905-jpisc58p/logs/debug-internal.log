@@ -1,8 +1,0 @@
-{"time":"2024-11-17T05:49:05.57314188Z","level":"INFO","msg":"using version","core version":"0.18.7"}
-{"time":"2024-11-17T05:49:05.57315623Z","level":"INFO","msg":"created symlink","path":"/home/ubuntu/idl/Latent-Denoising-Diffusion-Probabilistic-Models/wandb/run-20241117_054905-jpisc58p/logs/debug-core.log"}
-{"time":"2024-11-17T05:49:05.67573047Z","level":"INFO","msg":"created new stream","id":"jpisc58p"}
-{"time":"2024-11-17T05:49:05.675774091Z","level":"INFO","msg":"stream: started","id":"jpisc58p"}
-{"time":"2024-11-17T05:49:05.675810181Z","level":"INFO","msg":"writer: Do: started","stream_id":"jpisc58p"}
-{"time":"2024-11-17T05:49:05.675814461Z","level":"INFO","msg":"sender: started","stream_id":"jpisc58p"}
-{"time":"2024-11-17T05:49:05.675838941Z","level":"INFO","msg":"handler: started","stream_id":"jpisc58p"}
-{"time":"2024-11-17T05:49:05.897414496Z","level":"INFO","msg":"Starting system monitor"}
