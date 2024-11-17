@@ -1,5 +1,6 @@
 import torch
 import os
+import wandb
 
 def load_checkpoint(unet, scheduler, vae=None, class_embedder=None, optimizer=None, checkpoint_path='checkpoints/checkpoint.pth'):
     
@@ -48,13 +49,14 @@ def save_checkpoint(unet, scheduler, vae=None, class_embedder=None, optimizer=No
     
     # Save checkpoint
     torch.save(checkpoint, checkpoint_path)
+    wandb.save(checkpoint_path)
     print(f"Checkpoint saved at {checkpoint_path}")
     
     # Manage checkpoint history
     manage_checkpoints(save_dir, keep_last_n=10)
 
 
-def manage_checkpoints(save_dir, keep_last_n=10):
+def manage_checkpoints(save_dir, keep_last_n=20):
     # List all checkpoint files in the save directory
     checkpoints = [f for f in os.listdir(save_dir) if f.startswith('checkpoint_epoch_')]
     checkpoints.sort(key=lambda f: int(f.split('_')[-1].split('.')[0]))  # Sort by epoch number

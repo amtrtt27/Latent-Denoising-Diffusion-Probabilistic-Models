@@ -253,7 +253,7 @@ def main():
     if is_primary(args):
         wandb_logger = wandb.init(
             project='ddpm', 
-            name=args.run_name, 
+            name=f"{args.run_name}_{model_id}", 
             config=vars(args))
     
     # Start training    
@@ -348,7 +348,6 @@ def main():
             
             # TODO: step your optimizer
             optimizer.step()
-            lr_scheduler.step()
             progress_bar.update(1)
             
             # logger
@@ -358,6 +357,7 @@ def main():
 
         # validation
         # send unet to evaluation mode
+        lr_scheduler.step()
         unet.eval()        
         generator = torch.Generator(device=device)
         generator.manual_seed(epoch + args.seed)
@@ -393,6 +393,7 @@ def main():
         # save checkpoint
         if is_primary(args):
             save_checkpoint(unet_wo_ddp, scheduler_wo_ddp, vae_wo_ddp, class_embedder, optimizer, epoch, save_dir=save_dir, model_id=model_id)
+
 
 
 if __name__ == '__main__':
