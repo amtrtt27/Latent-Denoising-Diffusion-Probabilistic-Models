@@ -11,6 +11,7 @@ from tqdm import tqdm
 from PIL import Image
 import torch.nn.functional as F
 from utils import randn_tensor
+import uuid
 
 from torchvision import datasets, transforms
 from torchvision.utils  import make_grid
@@ -164,7 +165,8 @@ def main():
         os.makedirs(save_dir, exist_ok=True)
     
     # setup model
-    logger.info("Creating model")
+    model_id = str(uuid.uuid4().hex[:6])
+    logger.info(f"Creating model with ID: {model_id}")
     # unet
     unet = UNet(input_size=args.unet_in_size, input_ch=args.unet_in_ch, T=args.num_train_timesteps, ch=args.unet_ch, ch_mult=args.unet_ch_mult, attn=args.unet_attn, num_res_blocks=args.unet_num_res_blocks, dropout=args.unet_dropout, conditional=args.use_cfg, c_dim=args.unet_ch)
     # preint number of parameters
@@ -235,6 +237,7 @@ def main():
     
     # TODO: setup evaluation pipeline
     # NOTE: this pipeline is not differentiable and only for evaluatin
+    
     pipeline = DDPMPipeline(unet, scheduler, vae=vae, class_embedder=class_embedder)
     
     
@@ -367,7 +370,13 @@ def main():
             gen_images = pipeline(None) 
         else:
             # TODO: fill pipeline
-            gen_images = pipeline(None) 
+            gen_images = pipeline(batch_size=batch_size,
+                            num_inference_steps=args.num_inference_steps,
+                            classes=args.num_classes,
+                            guidance_scale=args.guidance_scale,
+                            generator=generator,
+                            device = device,
+                        ) 
             
         # create a blank canvas for the grid
         grid_image = Image.new('RGB', (4 * args.image_size, 1 * args.image_size))
@@ -383,7 +392,7 @@ def main():
             
         # save checkpoint
         if is_primary(args):
-            save_checkpoint(unet_wo_ddp, scheduler_wo_ddp, vae_wo_ddp, class_embedder, optimizer, epoch, save_dir=save_dir)
+            save_checkpoint(unet_wo_ddp, scheduler_wo_ddp, vae_wo_ddp, class_embedder, optimizer, epoch, save_dir=save_dir, model_id=model_id)
 
 
 if __name__ == '__main__':
