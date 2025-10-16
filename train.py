@@ -19,7 +19,7 @@ from torchvision.utils  import make_grid
 from models import UNet, VAE, ClassEmbedder
 from schedulers import DDPMScheduler, DDIMScheduler
 from pipelines import DDPMPipeline
-from utils import seed_everything, init_distributed_device, is_primary, AverageMeter, str2bool, save_checkpoint
+from utils import seed_everything, init_distributed_device, is_primary, AverageMeter, str2bool, save_checkpoint, load_checkpoint
 
 
 logger = get_logger(__name__)
@@ -80,8 +80,53 @@ def parse_args():
     parser.add_argument("--use_ddim", type=str2bool, default=False, help="use ddim sampler for inference")
     
     # checkpoint path for inference
+    parser.add_argument("--resume", type=str2bool, default=False, help="resume training from saved checkpoint")
     parser.add_argument("--ckpt", type=str, default=None, help="checkpoint path for inference")
     
+    # ----Latent Consistency Distillation (LCD) Specific Arguments----
+    parser.add_argument(
+        "--w_min",
+        type=float,
+        default=2.0,
+        required=False,
+        help=(
+            "The minimum guidance scale value for guidance scale sampling. Note that we are using the Imagen CFG"
+            " formulation rather than the LCM formulation, which means all guidance scales have 1 added to them as"
+            " compared to the original paper."
+        ),
+    )
+    parser.add_argument(
+        "--w_max",
+        type=float,
+        default=10.0,
+        required=False,
+        help=(
+            "The maximum guidance scale value for guidance scale sampling. Note that we are using the Imagen CFG"
+            " formulation rather than the LCM formulation, which means all guidance scales have 1 added to them as"
+            " compared to the original paper."
+        ),
+    )
+
+    parser.add_argument(
+        "--timestep_scaling_factor",
+        type=float,
+        default=10.0,
+        help=(
+            "The multiplicative timestep scaling factor used when calculating the boundary scalings for LCM. The"
+            " higher the scaling is, the lower the approximation error, but the default value of 10.0 should typically"
+            " suffice."
+        ),
+    )
+
+    # ----Exponential Moving Average (EMA)----
+    parser.add_argument(
+        "--ema_decay",
+        type=float,
+        default=0.95,
+        required=False,
+        help="The exponential moving average (EMA) rate or decay factor.",
+    )
+
     # first parse of command-line args to check for config file
     args = parser.parse_args()
     
@@ -173,17 +218,21 @@ def main():
     num_params = sum(p.numel() for p in unet.parameters() if p.requires_grad)
     logger.info(f"Number of parameters: {num_params / 10 ** 6:.2f}M")
     
-    # TODO: ddpm shceduler
-    scheduler = DDPMScheduler(num_train_timesteps=args.num_train_timesteps,
-                            num_inference_steps=args.num_inference_steps,
-                            beta_start=args.beta_start,
-                            beta_end=args.beta_end,
-                            beta_schedule=args.beta_schedule,
-                            variance_type=args.variance_type,
-                            prediction_type=args.prediction_type,
-                            clip_sample=args.clip_sample,
-                            clip_sample_range=args.clip_sample_range,
-                               )
+    # scheduler
+    if args.use_ddim:
+        shceduler_class = DDIMScheduler
+    else:
+        shceduler_class = DDPMScheduler
+    # TOOD: scheduler
+    scheduler = shceduler_class(
+        num_train_timesteps=args.num_train_timesteps,
+        num_inference_steps=args.num_inference_steps,
+        beta_start=args.beta_start,
+        beta_end=args.beta_end,
+        beta_schedule=args.beta_schedule,
+        clip_sample=args.clip_sample,
+        clip_sample_range=args.clip_sample_range
+    ).to(device)
     
     # NOTE: this is for latent DDPM 
     vae = None
@@ -197,7 +246,7 @@ def main():
     class_embedder = None
     if args.use_cfg:
         # TODO: 
-        class_embedder = ClassEmbedder(None)
+        class_embedder = ClassEmbedder(n_classes=args.num_classes, embed_dim=args.unet_ch)
         
     # send to device
     unet = unet.to(device)
@@ -207,15 +256,28 @@ def main():
     if class_embedder:
         class_embedder = class_embedder.to(device)
     
+    if args.resume:
+        epoch = load_checkpoint(unet=unet, scheduler=scheduler, class_embedder=class_embedder, checkpoint_path=args.ckpt)
+        args.num_epochs -= (epoch + 1)
+    
+    if class_embedder is not None:
+        parameters = list(unet.parameters()) + list(class_embedder.parameters())
+    else:
+        parameters = list(unet.parameters())
+
     # TODO: setup optimizer
-    optimizer = torch.optim.AdamW(unet.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay) 
+    optimizer = torch.optim.AdamW(parameters, lr=args.learning_rate, weight_decay=args.weight_decay) 
+    
+    if args.resume:
+        load_checkpoint(optimizer=optimizer, checkpoint_path=args.ckpt)
+
     # TODO: setup scheduler
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.num_epochs)
     
     # max train steps
     num_update_steps_per_epoch = len(train_loader)
     args.max_train_steps = args.num_epochs * num_update_steps_per_epoch
-    
+
     #  setup distributed training
     if args.distributed:
         unet = torch.nn.parallel.DistributedDataParallel(
@@ -229,16 +291,13 @@ def main():
         unet_wo_ddp = unet
         class_embedder_wo_ddp = class_embedder
     vae_wo_ddp = vae
-    # TODO: setup ddim
-    if args.use_ddim:
-        scheduler_wo_ddp = DDIMScheduler(None)
-    else:
-        scheduler_wo_ddp = scheduler
+
+    scheduler_wo_ddp = scheduler
     
     # TODO: setup evaluation pipeline
     # NOTE: this pipeline is not differentiable and only for evaluatin
     
-    pipeline = DDPMPipeline(unet, scheduler, vae=vae, class_embedder=class_embedder)
+    pipeline = DDPMPipeline(unet_wo_ddp, scheduler_wo_ddp, vae=vae_wo_ddp, class_embedder=class_embedder_wo_ddp)
     
     
     # dump config file
@@ -282,16 +341,17 @@ def main():
         if hasattr(train_loader.sampler, 'set_epoch'):
             train_loader.sampler.set_epoch(epoch)
         
-        args.epoch = epoch
+        # args.epoch = epoch
+        current_lr = optimizer.param_groups[0]['lr']
         if is_primary(args):
-            logger.info(f"Epoch {epoch+1}/{args.num_epochs}")
+            logger.info(f"Epoch {epoch+1}/{args.num_epochs}, Learning Rate: {current_lr:.7f}")
         
         
         loss_m = AverageMeter()
         
         # TODO: set unet and scheduelr to train
-        unet.train()
-        scheduler.train()
+        unet_wo_ddp.train()
+        scheduler_wo_ddp.train()
         
         generator = torch.Generator(device=device)
         generator.manual_seed(epoch + args.seed)
@@ -308,7 +368,7 @@ def main():
             # NOTE: this is for latent DDPM 
             if vae is not None:
                 # use vae to encode images as latents
-                images = None 
+                images = vae.encode(images) 
                 # NOTE: do not change  this line, this is to ensure the latent has unit std
                 images = images * 0.1845
             
@@ -333,10 +393,10 @@ def main():
                 timesteps = torch.randint(0, args.num_train_timesteps, (batch_size,), device=device).long()
                 
                 # TODO: add noise to images using scheduler
-                noisy_images = scheduler.add_noise(images, noise, timesteps)
+                noisy_images = scheduler_wo_ddp.add_noise(images, noise, timesteps)
                 
                 # TODO: model prediction
-                model_pred = unet(noisy_images, timesteps, class_emb)
+                model_pred = unet_wo_ddp(noisy_images, timesteps, class_emb)
                 
                 if args.prediction_type == 'epsilon':
                     target = noise 
@@ -354,7 +414,6 @@ def main():
                 torch.nn.utils.clip_grad_norm_(unet.parameters(), args.grad_clip)
             
             # TODO: step your optimizer
-            # optimizer.step()
             scaler.step(optimizer) # This is a replacement for optimizer.step()
             scaler.update()
             progress_bar.set_postfix(loss="{:.04f} ({:.04f})".format(loss.item(), loss_m.avg))
@@ -365,27 +424,37 @@ def main():
             
             # logger
             if step % 200 == 0 and is_primary(args):
-                # logger.info(f"Epoch {epoch+1}/{args.num_epochs}, Step {step}/{num_update_steps_per_epoch}, Loss {loss.item()} ({loss_m.avg})")
-                wandb_logger.log({'loss': loss_m.avg})
+                wandb_logger.log({'loss': loss_m.avg, 
+                                  'lr': current_lr})
         
         progress_bar.close()
         # validation
         # send unet to evaluation mode
         lr_scheduler.step()
-        unet.eval()        
+        unet_wo_ddp.eval()        
         
+        torch.cuda.empty_cache()
+
         # NOTE: this is for CFG
         if args.use_cfg:
             # random sample 4 classes
             classes = torch.randint(0, args.num_classes, (4,), device=device)
             # TODO: fill pipeline
-            gen_images = pipeline(None) 
+            gen_images = pipeline(batch_size=len(classes),
+                            num_inference_steps=args.num_inference_steps,
+                            classes=classes,
+                            guidance_scale=args.cfg_guidance_scale,
+                            generator=generator,
+                            device = device,
+                        )  
         else:
             # TODO: fill pipeline
-            gen_images = pipeline(batch_size=batch_size,
+            cfg_guidance_scale = args.cfg_guidance_scale if args.cfg_guidance_scale > 0 else None
+
+            gen_images = pipeline(batch_size=batch_size//2,
                             num_inference_steps=args.num_inference_steps,
                             classes=args.num_classes,
-                            guidance_scale=args.cfg_guidance_scale,
+                            guidance_scale=cfg_guidance_scale,
                             generator=generator,
                             device = device,
                         ) 
@@ -397,14 +466,26 @@ def main():
             x = (i % 4) * args.image_size
             y = 0
             grid_image.paste(image, (x, y))
+
+        # Ensure the output directory exists
+        img_output_dir = "output_images"
+        os.makedirs(img_output_dir, exist_ok=True)
+
+        # Construct the file name using run_name and epoch
+        img_file_name = f"{args.run_name}_epoch_{epoch}.png"
+        img_file_path = os.path.join(output_dir, img_file_name)
+
+        # Save the grid image
+        grid_image.save(img_file_path)
+        print(f"Grid image saved as '{img_file_path}'")
         
         # Send to wandb
         if is_primary(args):
             wandb_logger.log({'gen_images': wandb.Image(grid_image)})
             
         # save checkpoint
-        if is_primary(args):
-            save_checkpoint(unet_wo_ddp, scheduler_wo_ddp, vae_wo_ddp, class_embedder, optimizer, epoch, save_dir=save_dir)
+        if is_primary(args) and epoch % 3 == 0:
+            save_checkpoint(unet_wo_ddp, scheduler_wo_ddp, None, class_embedder, optimizer, epoch, save_dir=save_dir)
 
         torch.cuda.empty_cache()
 
