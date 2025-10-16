@@ -2,38 +2,64 @@ import torch
 import os
 import wandb
 
-def load_checkpoint(unet, scheduler, vae=None, class_embedder=None, optimizer=None, checkpoint_path='checkpoints/checkpoint.pth'):
+def load_checkpoint(unet=None, scheduler=None, 
+                    vae=None, class_embedder=None,
+                    optimizer=None,
+                    checkpoint_path='checkpoints/checkpoint.pth'):
     
     print("loading checkpoint")
     checkpoint = torch.load(checkpoint_path)
     
-    print("loading unet")
-    unet.load_state_dict(checkpoint['unet_state_dict'])
-    print("loading scheduler")
-    scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+    if unet is not None:
+        print("loading unet")
+        if isinstance(unet, list):
+            for i in range(len(unet)):
+                unet[i].load_state_dict[f'unet_state_dict_{i}']
+        else:
+            unet.load_state_dict(checkpoint['unet_state_dict'])
+
+    if scheduler is not None:
+        print("loading scheduler")
+        scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
     
     if vae is not None and 'vae_state_dict' in checkpoint:
         print("loading vae")
         vae.load_state_dict(checkpoint['vae_state_dict'])
+
+    if optimizer is not None and 'optimizer_state_dict' in checkpoint:
+        print("loading optimizer")
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     
     if class_embedder is not None and 'class_embedder_state_dict' in checkpoint:
         print("loading class_embedder")
         class_embedder.load_state_dict(checkpoint['class_embedder_state_dict'])
     
+    if 'epoch' in checkpoint:
+        print('load epoch')
+        epoch = checkpoint['epoch']
+    return epoch
+    
     
         
 
-def save_checkpoint(unet, scheduler, vae=None, class_embedder=None, optimizer=None, epoch=None, save_dir='checkpoints'):
+def save_checkpoint(unet, scheduler=None, vae=None, class_embedder=None, optimizer=None, epoch=None, save_dir='checkpoints'):
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
     # Define checkpoint file name
     checkpoint_path = os.path.join(save_dir, f'checkpoint_epoch_{epoch}.pth')
+    checkpoint= {}
 
-    checkpoint = {
-        'unet_state_dict': unet.state_dict(),
-        'scheduler_state_dict': scheduler.state_dict(),
-    }
+    if scheduler is not None:
+        checkpoint['scheduler_state_dict']= scheduler.state_dict()
+    
+    if unet is not None:
+        if isinstance(unet, list):
+            for i in range(len(unet)):
+                checkpoint[f'unet_state_dict_{i}'] = unet[i].state_dict()
+        else:
+            checkpoint['unet_state_dict'] = unet.state_dict()
+
     
     if vae is not None:
         checkpoint['vae_state_dict'] = vae.state_dict()
